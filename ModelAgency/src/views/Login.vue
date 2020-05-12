@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <h1>Login Page</h1>
+  <div class="center">
+    <h1>Login</h1>
     <form>
       <div class="form-group">
         <label for="username">Username</label>
@@ -11,7 +11,9 @@
           class="form-control"
           :class="{ 'is-invalid': submitted && !username }"
         />
-        <div v-show="submitted && !username" class="invalid-feedback">Username is required</div>
+        <div v-show="submitted && !username" class="invalid-feedback">
+          Username is required
+        </div>
       </div>
       <div class="form-group">
         <label for="password">Password</label>
@@ -22,7 +24,9 @@
           class="form-control"
           :class="{ 'is-invalid': submitted && !password }"
         />
-        <div v-show="submitted && !password" class="invalid-feedback">Password is required</div>
+        <div v-show="submitted && !password" class="invalid-feedback">
+          Password is required
+        </div>
       </div>
       <div class="form-group">
         <button class="btn btn-primary" :disabled="loggingIn">Login</button>
@@ -43,9 +47,9 @@ export default {
       form: {
         username: "",
         password: "",
-        email: ""
+        email: "",
       },
-      url: ""
+      url: "",
     };
   },
   methods: {
@@ -55,15 +59,26 @@ export default {
         method: "POST",
         body: JSON.stringify({
           email: this.form.email,
-          password: this.form.password
+          password: this.form.password,
         }),
-        headers: { "Content-Type": "application/json" }
-      }).then(res =>
-        res.json().then(token => {
+        headers: { "Content-Type": "application/json" },
+      }).then((res) =>
+        res.json().then((token) => {
           localStorage.setItem("token", token.jwt);
         })
       );
-    }
-  }
+    },
+  },
 };
 </script>
+
+<style scoped>
+.center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid gray;
+  padding: 50px;
+}
+</style>

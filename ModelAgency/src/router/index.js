@@ -2,7 +2,8 @@ import Vue from "vue";
 import Router from "vue-router";
 
 import LoginPage from "@/views/Login";
-import Home from "@/components/Home";
+import Dashboard from "@/views/Dashboard";
+import Manager from "@/views/Manager";
 Vue.use(Router);
 
 const router = new Router({
@@ -19,15 +20,20 @@ const router = new Router({
       component: LoginPage,
     },
     {
-      path: "/home",
-      name: "Home",
-      component: Home,
+      path: "/dashboard",
+      name: "Dashboard",
+      component: Dashboard,
+    },
+    {
+      path: "/manager",
+      name: "Manager",
+      component: Manager,
     },
   ],
 });
 
 router.beforeEach((to, from, next) => {
-  const publicPages = ["/login"];
+  const publicPages = ["/login", "/dashboard", "/manager"];
   const authRequired = !publicPages.includes(to.path);
   const loggedIn = localStorage.getItem("token");
 
