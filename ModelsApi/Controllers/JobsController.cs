@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System;
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -80,6 +81,7 @@ namespace ModelsApi.Controllers
         //[Authorize(Roles = "Manager")]
         public async Task<IActionResult> PutJob(long id, NewJob newJob)
         {
+            if (newJob == null) throw new ArgumentNullException(nameof(newJob));
             try
             {
                 var job = await _context.Jobs.FindAsync(id).ConfigureAwait(false);
@@ -89,7 +91,7 @@ namespace ModelsApi.Controllers
                 job.Location = newJob.Location;
                 job.StartDate = newJob.StartDate;
 
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync().ConfigureAwait(false);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -118,7 +120,7 @@ namespace ModelsApi.Controllers
         {
             var job = _mapper.Map<EfJob>(newJob);
             _context.Jobs.Add(job);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync().ConfigureAwait(false);
             var jobDto = _mapper.Map<Job>(job);
             return CreatedAtAction("GetJob", new { id = job.EfJobId }, jobDto);
         }
@@ -155,7 +157,7 @@ namespace ModelsApi.Controllers
                 Model = model
             });
 
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync().ConfigureAwait(false);
 
             var jobDto = _mapper.Map<Job>(job);
             foreach (var jobModel in job.JobModels)
@@ -165,7 +167,7 @@ namespace ModelsApi.Controllers
             }
 
 
-            return Created(job.EfJobId.ToString(), jobDto);
+            return Created(new Uri(job.EfJobId.ToString()), jobDto);
         }
 
         // DELETE: api/Jobs/1/model/3.
@@ -190,7 +192,7 @@ namespace ModelsApi.Controllers
             }
 
             _context.JobModels.Remove(jobModel);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync().ConfigureAwait(false);
 
             return Ok();
         }
@@ -208,7 +210,7 @@ namespace ModelsApi.Controllers
             }
 
             _context.Jobs.Remove(job);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync().ConfigureAwait(false);
 
             return Ok();
         }

@@ -18,7 +18,7 @@ namespace ModelsApi.Utilities
 
             var claims = new Claim[]
             {
-                new Claim("Email", email),
+                new Claim("Email", email), 
                 roleClaim,
                 new Claim("ModelId", modelId.ToString()),
                 new Claim(JwtRegisteredClaimNames.Nbf, new DateTimeOffset(DateTime.Now).ToUnixTimeSeconds().ToString()),

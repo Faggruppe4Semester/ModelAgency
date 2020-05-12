@@ -7,6 +7,7 @@ namespace ModelsApi.Models.DTOs
 {
     public class NewExpense
     {
+        public long EfExpenseId { get; set; }
         public long ModelId { get; set; }
         public long JobId { get; set; }
         public DateTime Date { get; set; }
