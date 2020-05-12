@@ -32,9 +32,14 @@
     <Content Include="public\favicon.ico" />
     <Content Include="public\index.html" />
     <Content Include="src\App.vue" />
+    <Content Include="src\components\comp.vue">
+      <SubType>Code</SubType>
+    </Content>
     <Content Include="src\components\Home.vue" />
     <Content Include="package.json" />
     <Content Include="README.md" />
+    <Content Include="src\router\index.js" />
+    <Content Include="src\views\Login.vue" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="dist\" />
@@ -42,6 +47,9 @@
     <Folder Include="src\" />
     <Folder Include="src\assets\" />
     <Folder Include="src\components\" />
+    <Folder Include="src\router\" />
+    <Folder Include="src\utility\" />
+    <Folder Include="src\views\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="babel.config.js" />
