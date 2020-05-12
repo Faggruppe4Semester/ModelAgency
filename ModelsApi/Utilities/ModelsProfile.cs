@@ -4,6 +4,9 @@ using ModelsApi.Models.Entities;
 
 namespace ModelsApi.Utilities
 {
+    // Read: Getting Started with AutoMapper in ASP.NET Core
+    // at https://code-maze.com/automapper-net-core/
+    //
     public class ModelsProfile : Profile
     {
         public ModelsProfile()

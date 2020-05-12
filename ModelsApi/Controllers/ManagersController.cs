@@ -26,8 +26,7 @@ namespace ModelsApi.Controllers
         public ManagersController(ApplicationDbContext context,
             IOptions<AppSettings> appSettings)
         {
-            if (appSettings == null) throw new ArgumentNullException(nameof(appSettings));
-            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _context = context;
             _appSettings = appSettings.Value;
         }
 
@@ -35,7 +34,7 @@ namespace ModelsApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<EfManager>>> GetManagers()
         {
-            return await _context.Managers.ToListAsync().ConfigureAwait(false);
+            return await _context.Managers.ToListAsync();
         }
 
         // GET: api/Managers/5
@@ -56,7 +55,6 @@ namespace ModelsApi.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutManager(long id, EfManager manager)
         {
-            if (manager == null) throw new ArgumentNullException(nameof(manager));
             if (id != manager.EfManagerId)
             {
                 return BadRequest();
@@ -75,7 +73,7 @@ namespace ModelsApi.Controllers
 
             try
             {
-                await _context.SaveChangesAsync().ConfigureAwait(false);
+                await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -118,9 +116,9 @@ namespace ModelsApi.Controllers
             manager.Account = account;
             _context.Accounts.Add(account);
             _context.Managers.Add(manager);
-            await _context.SaveChangesAsync().ConfigureAwait(false);
+            await _context.SaveChangesAsync();
 
-            return Created(new Uri(manager.EfManagerId.ToString()), manager);
+            return Created(manager.EfManagerId.ToString(), manager);
         }
 
         // DELETE: api/Managers/5
@@ -135,7 +133,7 @@ namespace ModelsApi.Controllers
             var account = await _context.Accounts.FindAsync(manager.EfAccountId);
             _context.Accounts.Remove(account);
             _context.Managers.Remove(manager);
-            await _context.SaveChangesAsync().ConfigureAwait(false);
+            await _context.SaveChangesAsync();
 
             return manager;
         }

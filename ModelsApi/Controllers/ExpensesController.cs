@@ -10,7 +10,6 @@ using Microsoft.EntityFrameworkCore;
 using ModelsApi.Data;
 using ModelsApi.Models.DTOs;
 using ModelsApi.Models.Entities;
-using ModelsApi.Services;
 
 namespace ModelsApi.Controllers
 {
@@ -19,62 +18,80 @@ namespace ModelsApi.Controllers
     //[Authorize]
     public class ExpensesController : ControllerBase
     {
-        private readonly ExpensesService _expensesService;
+        private readonly ApplicationDbContext _context;
+        private readonly IMapper _mapper;
 
         public ExpensesController(ApplicationDbContext context,
             IMapper mapper)
         {
-            _expensesService = new ExpensesService(context, mapper);
+            _context = context;
+            _mapper = mapper;
         }
 
         // GET: api/Expenses
         [HttpGet]
         [Authorize(Roles = "Manager")]
-        public async Task<ActionResult<IEnumerable<NewExpense>>> GetExpenses()
+        public async Task<ActionResult<IEnumerable<EfExpense>>> GetExpenses()
         {
-            return await _expensesService.GetAll().ConfigureAwait(false);
+            return await _context.Expenses.ToListAsync().ConfigureAwait(false);
         }
 
         // GET: api/Expenses/5
         [HttpGet("{id}")]
-        public ActionResult<NewExpense> GetExpense(long id)
+        public async Task<ActionResult<EfExpense>> GetExpense(long id)
         {
-            try
+            var expense = await _context.Expenses.FindAsync(id);
+
+            if (expense == null)
             {
-                return _expensesService.GetBy(e => e.EfExpenseId == id).FirstOrDefault();
+                return NotFound();
             }
-            catch (ArgumentException e)
-            {
-                return BadRequest(e);
-            }
+
+            return expense;
         }
 
         [HttpGet("model/{modelId}")]
-        public ActionResult<List<NewExpense>> GetExpenseForModel(long modelId)
+        public async Task<ActionResult<IEnumerable<EfExpense>>> GetExpenseForModel(long modelId)
         {
-            return _expensesService.GetBy(e => e.ModelId == modelId);
+            var expense = await _context.Expenses
+                .Where(e => e.ModelId == modelId)
+                .ToListAsync().ConfigureAwait(false);
+
+            return expense;
         }
 
         // PUT: api/Expenses/5
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutExpense(long id, NewExpense expense)
+        public async Task<IActionResult> PutExpense(long id, EfExpense expense)
         {
-            try
+            if (expense is null)
+                return BadRequest("expense is null.");
+            if (id != expense.EfExpenseId)
             {
-                await _expensesService.Update(id, expense).ConfigureAwait(false);
-            }
-            catch (ArgumentNullException e)
-            {
-                return BadRequest(e);
-            }
-            catch (ArgumentException e)
-            {
-                return BadRequest(e);
+                return BadRequest("Id mismatch.");
             }
 
-            return Ok();
+            _context.Entry(expense).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync().ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ExpenseExists(id))
+                {
+                    return BadRequest("ExpenseId not found.");
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
         }
 
         // POST: api/Expenses
@@ -84,31 +101,39 @@ namespace ModelsApi.Controllers
         /// <param name="newExpense"></param>
         /// <returns></returns>
         [HttpPost]
-        public async Task<ActionResult<NewExpense>> PostExpense(NewExpense newExpense)
+        public async Task<ActionResult<EfExpense>> PostExpense(NewExpense newExpense)
         {
-            try
+            if (newExpense is null)
             {
-                return await _expensesService.Create(newExpense).ConfigureAwait(false);
+                return BadRequest("Data is missing");
             }
-            catch (ArgumentNullException nullException)
-            {
-                return BadRequest(nullException);
-            }
+
+            var expense = _mapper.Map<EfExpense>(newExpense);
+            _context.Expenses.Add(expense);
+            await _context.SaveChangesAsync().ConfigureAwait(false);
+
+            return CreatedAtAction("GetExpense", new { id = expense.EfExpenseId }, expense);
         }
 
         // DELETE: api/Expenses/5
         [HttpDelete("{id}")]
-        public async Task<ActionResult> DeleteExpense(long id)
+        public async Task<ActionResult<EfExpense>> DeleteExpense(long id)
         {
-            try
+            var expense = await _context.Expenses.FindAsync(id);
+            if (expense == null)
             {
-                await _expensesService.Delete(id).ConfigureAwait(false);
-                return Ok();
+                return NotFound();
             }
-            catch (ArgumentException e)
-            {
-                return BadRequest(e);
-            }
+
+            _context.Expenses.Remove(expense);
+            await _context.SaveChangesAsync().ConfigureAwait(false);
+
+            return expense;
+        }
+
+        private bool ExpenseExists(long id)
+        {
+            return _context.Expenses.Any(e => e.EfExpenseId == id);
         }
     }
 }

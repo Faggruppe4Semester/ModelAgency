@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -30,7 +29,6 @@ namespace ModelsApi.Controllers
             IOptions<AppSettings> appSettings,
             IMapper mapper)
         {
-            if (appSettings == null) throw new ArgumentNullException(nameof(appSettings));
             _context = context;
             _appSettings = appSettings.Value;
             _mapper = mapper;
@@ -40,7 +38,7 @@ namespace ModelsApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<EfModel>>> GetModels()
         {
-            return await _context.Models.ToListAsync().ConfigureAwait(false);
+            return await _context.Models.ToListAsync();
         }
 
         // GET: api/Models/5
@@ -63,8 +61,6 @@ namespace ModelsApi.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutModel(long id, EfModel model)
         {
-            if (model == null) throw new ArgumentNullException(nameof(model));
-
             if (id != model.EfModelId)
             {
                 return BadRequest();
@@ -74,7 +70,7 @@ namespace ModelsApi.Controllers
 
             try
             {
-                await _context.SaveChangesAsync().ConfigureAwait(false);
+                await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -95,9 +91,8 @@ namespace ModelsApi.Controllers
         [HttpPost]
         public async Task<ActionResult<EfModel>> PostModel(ModelDetails modelDto)
         {
-            if (modelDto == null) throw new ArgumentNullException(nameof(modelDto));
-            modelDto.Email = modelDto.Email.ToLower(CultureInfo.CurrentCulture);
-            var emailExist = await _context.Accounts.Where(u => u.Email == modelDto.Email).FirstOrDefaultAsync().ConfigureAwait(false);
+            modelDto.Email = modelDto.Email.ToLower();
+            var emailExist = await _context.Accounts.Where(u => u.Email == modelDto.Email).FirstOrDefaultAsync();
             if (emailExist != null)
             {
                 ModelState.AddModelError("Email", "Email already in use");
@@ -115,9 +110,9 @@ namespace ModelsApi.Controllers
             model.Account = account;
             _context.Accounts.Add(account);
             _context.Models.Add(model);
-            await _context.SaveChangesAsync().ConfigureAwait(false);
+            await _context.SaveChangesAsync();
 
-            return Created(new Uri(model.EfModelId.ToString()), model);
+            return Created(model.EfModelId.ToString(), model);
         }
 
         // DELETE: api/Models/5
@@ -131,7 +126,7 @@ namespace ModelsApi.Controllers
             }
 
             _context.Models.Remove(model);
-            await _context.SaveChangesAsync().ConfigureAwait(false);
+            await _context.SaveChangesAsync();
 
             return model;
         }

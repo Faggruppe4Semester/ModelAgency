@@ -21,7 +21,6 @@ namespace ModelsApi.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            if (modelBuilder == null) throw new ArgumentNullException(nameof(modelBuilder));
             // Configure many-to-many relationship
             modelBuilder.Entity<EfJobModel>()
                 .HasKey(p => new { p.EfJobId, p.EfModelId });
