@@ -37,7 +37,7 @@ namespace ModelsApi.Controllers
             if (modelId < 0)
             {
                 // Is manager
-                return await _context.Jobs.ToListAsync().ConfigureAwait(false);
+                return await _context.Jobs.Include(j => j.JobModels).ThenInclude(jm => jm.Model).ToListAsync().ConfigureAwait(false);
             }
             else
             {

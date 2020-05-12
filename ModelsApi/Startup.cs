@@ -14,6 +14,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace ModelsApi
 {
@@ -33,7 +34,7 @@ namespace ModelsApi
             services.AddCors();
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
-            services.AddControllers();
+            services.AddControllers().AddNewtonsoftJson(json => json.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore);
 
             // configure strongly typed settings objects
             var appSettingsSection = Configuration.GetSection("AppSettings");

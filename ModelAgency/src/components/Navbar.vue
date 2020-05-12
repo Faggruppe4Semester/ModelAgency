@@ -1,13 +1,25 @@
 <template>
   <ul>
-    <li><router-link class="a" to="/login">Home</router-link></li>
-    <li><router-link class="a" to="/dashboard">Dashboard</router-link></li>
-    <li><router-link class="a" to="/manager">Manager</router-link></li>
+    <li>
+      <router-link class="a" to="/login">Home</router-link>
+    </li>
+    <li>
+      <router-link class="a" to="/dashboard">Dashboard</router-link>
+    </li>
+    <li v-show="isManager()">
+      <router-link class="a" to="/manager">Manager</router-link>
+    </li>
   </ul>
 </template>
 
 <script>
-export default {};
+export default {
+  methods: {
+    isManager() {
+      return localStorage.getItem("Role") === "Manager";
+    }
+  }
+};
 </script>
 
 <style scoped>

@@ -42,6 +42,13 @@ export default {
       }).then(res =>
         res.json().then(token => {
           localStorage.setItem("token", token.jwt);
+          let payload = JSON.parse(window.atob(token.jwt.split(".")[1]));
+          localStorage.setItem(
+            "Role",
+            payload[
+              "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+            ]
+          );
           window.location.href = "/dashboard";
         })
       );
