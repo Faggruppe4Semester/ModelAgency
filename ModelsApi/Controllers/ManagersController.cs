@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +12,7 @@ using Microsoft.Extensions.Options;
 using ModelsApi.Data;
 using ModelsApi.Models.DTOs;
 using ModelsApi.Models.Entities;
+using ModelsApi.Repositories.Implementation;
 using ModelsApi.Utilities;
 using static BCrypt.Net.BCrypt;
 
@@ -20,127 +23,124 @@ namespace ModelsApi.Controllers
     [Authorize(Roles = "Manager")]
     public class ManagersController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
         private readonly AppSettings _appSettings;
+        private readonly GenericRepository<EfManager> _managerRepository;
+        private readonly GenericRepository<EfAccount> _accountRepository;
+        private readonly IMapper _mapper;
 
         public ManagersController(ApplicationDbContext context,
-            IOptions<AppSettings> appSettings)
+            IOptions<AppSettings> appSettings, IMapper mapper)
         {
-            _context = context;
+            _mapper = mapper;
             _appSettings = appSettings.Value;
+            _managerRepository = new GenericRepository<EfManager>(context);
+            _accountRepository = new GenericRepository<EfAccount>(context);
         }
 
         // GET: api/Managers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<EfManager>>> GetManagers()
         {
-            return await _context.Managers.ToListAsync();
+            return _managerRepository.GetBy(selector: source => source,
+                predicate: m => true);
         }
 
         // GET: api/Managers/5
         [HttpGet("{id}")]
         public async Task<ActionResult<EfManager>> GetManager(long id)
         {
-            var manager = await _context.Managers.FindAsync(id);
-
-            if (manager == null)
-            {
-                return NotFound();
-            }
-
-            return manager;
+            var manager = _managerRepository.GetBy(selector: source => source,
+                predicate: m => m.EfManagerId == id).FirstOrDefault();
+            return manager ?? (ActionResult<EfManager>) NotFound();
         }
 
         // PUT: api/Managers/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutManager(long id, EfManager manager)
+        public IActionResult PutManager(long id, EfManager manager)
         {
+            if (manager == null)
+            {
+                return BadRequest($"Input parameter {typeof(EfManager)} {nameof(manager)} was null.");
+            }
             if (id != manager.EfManagerId)
             {
-                return BadRequest();
+                return BadRequest("Id Mismatch");
             }
 
             // Check if new email
-            var old = await _context.Managers.FindAsync(manager.EfManagerId);
-            if (old.Email != manager.Email)
-{
-                // Update account
-                var account = await _context.Accounts.FindAsync(manager.EfAccountId);
-                account.Email = manager.Email;
-            }
-
-            _context.Entry(manager).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ManagerExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
+            var old = _managerRepository.GetBy(selector: source => source,
+                predicate: m => m.EfManagerId == id).FirstOrDefault();
+            if (old == null) return BadRequest($"Manager not found with id {id}");
+            if (old.Email == manager.Email) return Ok("No change made to email");
+            
+            // Update account
+            var account = _accountRepository.GetBy(
+                selector: source => source,
+                predicate: a => a.EfAccountId == manager.EfAccountId, 
+                disableTracking: false).FirstOrDefault();
+            if (account != null) account.Email = manager.Email;
+            _accountRepository.Update(account);
+            
+            return Ok();
         }
 
         // POST: api/Managers
         [HttpPost]
-        public async Task<ActionResult<EfManager>> PostManager(Manager managerDto)
+        public ActionResult<Manager> PostManager(Manager managerDto)
         {
             if (managerDto == null)
                 return BadRequest("Data is missing");
-            var manager = new EfManager();
-            manager.Email = managerDto.Email.ToLowerInvariant();
-            var emailExist = await _context.Accounts.Where(u => u.Email == manager.Email)
-                .FirstOrDefaultAsync().ConfigureAwait(false);
+            var manager = _mapper.Map<EfManager>(managerDto);
+            manager.Email = manager.Email.ToLowerInvariant();
+
+            var emailExist = _managerRepository.GetBy(selector: source => source,
+                predicate: u => u.Email == manager.Email).FirstOrDefault();
+
             if (emailExist != null)
             {
                 ModelState.AddModelError("Email", "Email already in use");
                 return BadRequest(ModelState);
             }
-            manager.FirstName = managerDto.FirstName;
-            manager.LastName = managerDto.LastName;
+
             var account = new EfAccount()
             {
                 Email = manager.Email,
-                IsManager = true
+                IsManager = true,
+                PwHash = HashPassword(managerDto.Password, _appSettings.BcryptWorkfactor)
             };
-            account.PwHash = HashPassword(managerDto.Password, _appSettings.BcryptWorkfactor);
-            manager.Account = account;
-            _context.Accounts.Add(account);
-            _context.Managers.Add(manager);
-            await _context.SaveChangesAsync();
 
-            return Created(manager.EfManagerId.ToString(), manager);
+            _accountRepository.Create(account);
+
+            manager.Account = _accountRepository.GetBy(
+                source => source, 
+                predicate: a => a.Email == account.Email, 
+                disableTracking: false)
+                .FirstOrDefault();
+
+            _managerRepository.Create(manager);
+
+            return _mapper.Map<Manager>(manager);
         }
 
         // DELETE: api/Managers/5
         [HttpDelete("{id}")]
-        public async Task<ActionResult<EfManager>> DeleteManager(long id)
+        public IActionResult DeleteManager(long id)
         {
-            var manager = await _context.Managers.FindAsync(id);
+            var manager = _managerRepository.GetBy(source => source,
+                predicate: m => m.EfManagerId == id,
+                disableTracking: false).FirstOrDefault();
             if (manager == null)
             {
                 return NotFound();
             }
-            var account = await _context.Accounts.FindAsync(manager.EfAccountId);
-            _context.Accounts.Remove(account);
-            _context.Managers.Remove(manager);
-            await _context.SaveChangesAsync();
+            var account = _accountRepository.GetBy(selector: source => source,
+                predicate: a => a.EfAccountId == manager.EfAccountId,
+                disableTracking: false).FirstOrDefault();
 
-            return manager;
-        }
+            _accountRepository.Delete(account);
+            _managerRepository.Delete(manager);
 
-        private bool ManagerExists(long id)
-        {
-            return _context.Managers.Any(e => e.EfManagerId == id);
+            return Ok();
         }
     }
 }

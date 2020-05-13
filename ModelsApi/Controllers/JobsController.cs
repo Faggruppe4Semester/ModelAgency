@@ -8,6 +8,7 @@ using ModelsApi.Models.Entities;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using ModelsApi.Repositories.Implementation;
 
 namespace ModelsApi.Controllers
 {
@@ -16,36 +17,44 @@ namespace ModelsApi.Controllers
     [Authorize]
     public class JobsController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
+        private readonly GenericRepository<EfJobModel> _jobModelRepository;
+        private readonly GenericRepository<EfJob> _jobRepository;
+        private readonly GenericRepository<EfModel> _modelRepository;
 
         public JobsController(ApplicationDbContext context,
             IMapper mapper)
         {
-            _context = context;
             _mapper = mapper;
+            _jobModelRepository = new GenericRepository<EfJobModel>(context);
+            _jobRepository = new GenericRepository<EfJob>(context);
+            _modelRepository = new GenericRepository<EfModel>(context);
         }
 
         // GET: api/Jobs
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<EfJob>>> GetJobs()
+        public async Task<ActionResult<IEnumerable<Job>>> GetJobs()
         {
             var modelStr = User.Claims.First(a => a.Type == "ModelId").Value;
-            long modelId;
-            if (!long.TryParse(modelStr, out modelId))
+            if (!long.TryParse(modelStr, out var modelId))
                 return Unauthorized("ModelId missing");
             if (modelId < 0)
             {
                 // Is manager
-                return await _context.Jobs.Include(j => j.JobModels).ThenInclude(jm => jm.Model).ToListAsync().ConfigureAwait(false);
+                var jobs = _jobRepository.GetBy(
+                    selector: source => source,
+                    predicate: ej => true,
+                    include: ej => ej.Include(ej => ej.JobModels)
+                        .ThenInclude(jm => jm.Model));
+                return _mapper.Map<List<Job>>(jobs);
             }
             else
             {
-                return await _context.JobModels
-                    .Where(jm => jm.EfModelId == modelId)
-                    .Include(r => r.Job)
-                    .Select(s => s.Job)
-                    .ToListAsync().ConfigureAwait(false);
+                var JobModels = _jobModelRepository.GetBy(selector: source => source,
+                    predicate: jm => jm.EfModelId == modelId,
+                    include: iq => iq.Include(jm => jm.Job)
+                        .Include(jm => jm.Model));
+                return _mapper.Map<List<Job>>(JobModels.Select(jm => jm.Job));
             }
         }
 
@@ -53,55 +62,36 @@ namespace ModelsApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Job>> GetJob(long id)
         {
-            var job = await _context.Jobs.Where(j => j.EfJobId == id)
-                .Include(j => j.JobModels)
-                .ThenInclude(jm => jm.Model)
-                .FirstOrDefaultAsync()
-                .ConfigureAwait(false);
+            var job = _jobRepository.GetBy(
+                selector: source => source,
+                predicate: ej => ej.EfJobId == id,
+                include: iq => iq
+                    .Include(ej => ej.JobModels)
+                        .ThenInclude(jm => jm.Model))
+                .FirstOrDefault();
 
             if (job == null)
-            {
                 return NotFound();
-            }
 
-            var jobDto = _mapper.Map<Job>(job);
-
-            foreach (var jobModel in job.JobModels)
-            {
-                var modelDto = _mapper.Map<Model>(jobModel.Model);
-                jobDto.Models.Add(modelDto);
-            }
-
-            return jobDto;
+            return _mapper.Map<Job>(job);
         }
 
         // PUT: api/Jobs/5
         [HttpPut("{id}")]
         //[Authorize(Roles = "Manager")]
-        public async Task<IActionResult> PutJob(long id, NewJob newJob)
+        public IActionResult PutJob(long id, NewJob newJob)
         {
-            try
-            {
-                var job = await _context.Jobs.FindAsync(id).ConfigureAwait(false);
-                job.Comments = newJob.Comments;
-                job.Customer = newJob.Customer;
-                job.Days = newJob.Days;
-                job.Location = newJob.Location;
-                job.StartDate = newJob.StartDate;
+            var job = _jobRepository.GetBy(
+                selector: source => source,
+                predicate: ej => ej.EfJobId == id,
+                disableTracking: false).FirstOrDefault();
+            job.Comments = newJob.Comments;
+            job.Customer = newJob.Customer;
+            job.Days = newJob.Days;
+            job.Location = newJob.Location;
+            job.StartDate = newJob.StartDate;
 
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!JobExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            _jobRepository.Update(job);
 
             return NoContent();
         }
@@ -117,10 +107,8 @@ namespace ModelsApi.Controllers
         public async Task<ActionResult<Job>> PostJob(NewJob newJob)
         {
             var job = _mapper.Map<EfJob>(newJob);
-            _context.Jobs.Add(job);
-            await _context.SaveChangesAsync();
-            var jobDto = _mapper.Map<Job>(job);
-            return CreatedAtAction("GetJob", new { id = job.EfJobId }, jobDto);
+            _jobRepository.Create(job);
+            return _mapper.Map<Job>(job);
         }
 
         // POST: api/Jobs
@@ -132,40 +120,35 @@ namespace ModelsApi.Controllers
         /// <returns></returns>
         [HttpPost("{jobId}/model/{modelId}")]
         //[Authorize(Roles = "Manager")]
-        public async Task<ActionResult<EfJob>> AddModelToJob(long jobId, long modelId)
+        public async Task<ActionResult<Job>> AddModelToJob(long jobId, long modelId)
         {
-            var job = await _context.Jobs.FindAsync(jobId).ConfigureAwait(false);
+            var job = _jobRepository.GetBy(selector: source => source, predicate: j => j.EfJobId == jobId, disableTracking: false).FirstOrDefault();
             if (job == null)
             {
                 ModelState.AddModelError("jobId", "jobId not found");
                 return BadRequest(ModelState);
             }
-            var model = await _context.Models.FindAsync(modelId).ConfigureAwait(false);
+
+            var model = _modelRepository.GetBy(selector: source => source, m => m.EfModelId == modelId, disableTracking: false).FirstOrDefault();
             if (model == null)
             {
                 ModelState.AddModelError("modelId", "modelId not found");
                 return BadRequest(ModelState);
             }
-            _context.Entry(job)
-                .Collection(j => j.JobModels)
-                .Load();
-            job.JobModels.Add(new EfJobModel()
+
+            _jobModelRepository.Create(new EfJobModel
             {
                 Job = job,
                 Model = model
             });
 
-            await _context.SaveChangesAsync();
+            var updatedJob = _jobRepository.GetBy(
+                selector: source => source,
+                predicate: ej => ej.EfJobId == job.EfJobId,
+                include: iq => iq.Include(ej => ej.JobModels)
+                    .ThenInclude(jm => jm.Model)).FirstOrDefault();
 
-            var jobDto = _mapper.Map<Job>(job);
-            foreach (var jobModel in job.JobModels)
-            {
-                var modelDto = _mapper.Map<Model>(jobModel.Model);
-                jobDto.Models.Add(modelDto);
-            }
-
-
-            return Created(job.EfJobId.ToString(), jobDto);
+            return _mapper.Map<Job>(updatedJob);
         }
 
         // DELETE: api/Jobs/1/model/3.
@@ -179,19 +162,18 @@ namespace ModelsApi.Controllers
         //[Authorize(Roles = "Manager")]
         public async Task<ActionResult<EfJob>> RemoveModelFromJob(long jobId, long modelId)
         {
-            var jobModel = await _context.JobModels.Where(
-                jm => jm.EfJobId == jobId && jm.EfModelId == modelId)
-                .FirstOrDefaultAsync()
-                .ConfigureAwait(false);
+            var jobModel = _jobModelRepository.GetBy(
+                selector: source => source,
+                predicate: jm => jm.EfJobId == jobId && jm.EfModelId == modelId,
+                disableTracking: false).FirstOrDefault();
+
             if (jobModel == null)
             {
                 ModelState.AddModelError("jobId", "jobId or modelId not found");
                 return BadRequest(ModelState);
             }
 
-            _context.JobModels.Remove(jobModel);
-            await _context.SaveChangesAsync();
-
+            _jobModelRepository.Delete(jobModel);
             return Ok();
         }
 
@@ -200,22 +182,18 @@ namespace ModelsApi.Controllers
         [Authorize(Roles = "Manager")]
         public async Task<ActionResult> DeleteJob(long id)
         {
-            var job = await _context.Jobs.FindAsync(id);
+            var job = _jobRepository.GetBy(selector: source => source,
+                predicate: ej => ej.EfJobId == id,
+                disableTracking: false).FirstOrDefault();
+
             if (job == null)
             {
                 ModelState.AddModelError("jobId", "jobId or modelId not found");
                 return BadRequest(ModelState);
             }
 
-            _context.Jobs.Remove(job);
-            await _context.SaveChangesAsync();
-
+            _jobRepository.Delete(job);
             return Ok();
-        }
-
-        private bool JobExists(long id)
-        {
-            return _context.Jobs.Any(e => e.EfJobId == id);
         }
     }
 }
