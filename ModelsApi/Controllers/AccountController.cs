@@ -73,7 +73,7 @@ namespace ModelsApi.Controllers
                                 modelId = model.EfModelId;
                         }
                         var jwt = GenerateToken(account.Email, modelId, account.IsManager);
-                        var token = new Token() { JWT = jwt };
+                        var token = new Token() { JWT = jwt, Id = modelId };
                         return token;
                     }
                 }
