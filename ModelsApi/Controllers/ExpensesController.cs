@@ -63,6 +63,14 @@ namespace ModelsApi.Controllers
                 predicate: e => e.ModelId == modelId);
         }
 
+        [HttpGet("/job/{jobId}")]
+        public ActionResult<IEnumerable<EfExpense>> GetExpenseForJob(long jobId)
+        {
+            return _expensesRepository.GetBy(
+                selector: source => source,
+                predicate: e => e.JobId == jobId);
+        }
+
         [HttpGet("model/{modelId}/job/{jobId}")]
         public ActionResult<IEnumerable<EfExpense>> GetExpenseForModelAndJob(long modelId, long jobId)
         {
