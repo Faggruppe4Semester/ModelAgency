@@ -39,6 +39,7 @@ export default {
       }).then(res =>
         res.json().then(token => {
           localStorage.setItem("token", token.jwt);
+          localStorage.setItem("id", token.id);
           let payload = JSON.parse(window.atob(token.jwt.split(".")[1]));
           localStorage.setItem(
             "Role",

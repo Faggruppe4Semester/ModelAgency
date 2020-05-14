@@ -172,6 +172,25 @@ export default {
     },
     isManager() {
       return localStorage.getItem("Role") === "Manager";
+    },
+    addExpense() {
+      var url = "https://localhost:44368/api/expenses";
+      fetch(url, {
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({
+          modelId: localStorage.getItem("id"),
+          jobId: this.id,
+          date: this.formEx.date,
+          text: this.formEx.text,
+          amount: this.formEx.amount
+        }),
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("token"),
+          "Content-Type": "application/json"
+        }
+      }) // eslint-disable-next-line no-console
+        .catch(error => () => console.log(error));
     }
   },
   mounted: function() {
@@ -206,6 +225,16 @@ export default {
       })
       // eslint-disable-next-line no-console
       .catch(error => () => console.log(error));
+
+    url = "https://localhost:44368/api/expenses/" + this.id;
+    fetch(url, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        Authorization: "Bearer " + localStorage.getItem("token"),
+        "Content-Type": "application/json"
+      }
+    });
   }
 };
 </script>

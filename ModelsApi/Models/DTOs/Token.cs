@@ -8,5 +8,6 @@ namespace ModelsApi.Models.DTOs
     public class Token
     {
         public string JWT { get; set; }
+        public long Id { get; set; }
     }
 }
