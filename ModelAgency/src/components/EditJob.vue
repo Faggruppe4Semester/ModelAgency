@@ -1,37 +1,100 @@
 <template>
-  <div class="cc col-4">
-    <h1>Edit job {{this.id}}</h1>
-    <span v-show="errors.length">
-      <b>Required:</b>
-      <ul>
-        <li v-for="error in errors" :key="error.message">{{error.message}}</li>
-      </ul>
-    </span>
-    <form @submit.prevent="checkForm">
-      <div class="form-group">
-        <label for="customer">Customer</label>
-        <input class="form-control" v-model="job.customer" name="customer" />
+  <div class="cc col-8">
+    <h1>Edit job</h1>
+    <div class="row">
+      <div class="col-5">
+        <table class="table">
+          <tbody>
+            <tr>
+              <td>
+                <h5>Customer</h5>
+              </td>
+              <td>{{job.customer}}</td>
+            </tr>
+            <tr>
+              <td>
+                <h5>Start date</h5>
+              </td>
+              <td>{{job.startDate}}</td>
+            </tr>
+            <tr>
+              <td>
+                <h5>Days of work</h5>
+              </td>
+              <td>{{job.days}}</td>
+            </tr>
+            <tr>
+              <td>
+                <h5>Location</h5>
+              </td>
+              <td>{{job.location}}</td>
+            </tr>
+            <tr>
+              <td>
+                <h5>Comments</h5>
+              </td>
+              <td>{{job.comments}}</td>
+            </tr>
+            <tr>
+              <td>
+                <h5>Models</h5>
+              </td>
+              <td>
+                <div class="row m-1" v-for="model in job.models" v-bind:key="model.modelId">
+                  <button
+                    class="btn btn-danger"
+                    v-on:click="removeModelFromJob(model.modelId)"
+                    v-if="isManager()"
+                  >X</button>
+                  <p class="m-1">{{model.firstName}} {{model.lastName}}</p>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div class="form-group">
-        <label for="startDate">Start date</label>
-        <input class="form-control" v-model="job.startDate" name="startDate" />
+      <div class="col-4" v-if="isManager()">
+        <form @submit.prevent="addModelToJob">
+          <div class="form-group">
+            <label>Add model to job</label>
+            <select v-model="selected" class="form-control">
+              <option
+                v-for="model in models"
+                :key="model.modelId"
+                v-bind:value="model.modelId"
+              >{{model.firstName}} {{model.lastName}}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <input type="submit" class="btn btn-success" value="Add model to job" />
+          </div>
+        </form>
       </div>
-      <div class="form-group">
-        <label for="days">Days of work</label>
-        <input class="form-control" v-model.number="job.days" name="days" type="number" />
+
+      <div class="col-1"></div>
+      <div class="col-4" v-if="!isManager()">
+        <form @submit.prevent="addExpense">
+          <div class="form-group">
+            <label for="date">Date</label>
+            <input class="form-control" v-model="formEx.date" name="date" />
+          </div>
+          <div class="form-group">
+            <label for="text">Text</label>
+            <input class="form-control" v-model="formEx.text" name="text" />
+          </div>
+          <div class="form-group">
+            <label for="amount">Amount</label>
+            <input class="form-control" v-model.number="formEx.amount" name="amount" type="number" />
+          </div>
+          <div class="form-group">
+            <input type="submit" value="Add expense to job" class="btn btn-success" />
+          </div>
+        </form>
       </div>
-      <div class="form-group">
-        <label for="location">Location</label>
-        <input class="form-control" v-model="job.location" name="location" />
-      </div>
-      <div class="form-group">
-        <label for="comments">Comments</label>
-        <input class="form-control" v-model="job.comments" name="comments" />
-      </div>
-      <div class="formgroup">
-        <input type="submit" value="Save job" class="btn btn-success" />
-      </div>
-    </form>
+    </div>
   </div>
 </template>
 
@@ -40,8 +103,14 @@ export default {
   props: ["id"],
   data() {
     return {
-      errors: [],
-      job: {}
+      selected: "",
+      models: [],
+      job: {},
+      formEx: {
+        date: "",
+        text: "",
+        amount: 0
+      }
     };
   },
   methods: {
@@ -65,27 +134,44 @@ export default {
           // eslint-disable-next-line no-console
           .catch(error => () => console.log(error));
       }
-      this.errors = [];
-
-      if (!this.job.customer) {
-        this.errors.push({ message: "No customer listed" });
-      }
-      if (!this.job.startDate) {
-        this.errors.push({ message: "No start date listed" });
-      }
-      if (!this.job.days) {
-        this.errors.push({ message: "Number of days of work not set" });
-      }
-      if (Number(this.job.days) <= 0) {
-        this.errors.push({
-          message: "Number of days of work was not listed or invalid number"
-        });
-      }
-      if (!this.job.location) {
-        this.errors.push({ message: "No location listed" });
-      }
 
       e.PreventDefault();
+    },
+    addModelToJob(e) {
+      var url =
+        "https://localhost:44368/api/jobs/" +
+        this.job.jobId +
+        "/model/" +
+        this.selected;
+      fetch(url, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("token"),
+          "Content-Type": "application/json"
+        }
+      })
+        // eslint-disable-next-line no-console
+        .catch(error => () => console.log(error));
+
+      e.PreventDefault();
+    },
+    removeModelFromJob(id) {
+      var url =
+        "https://localhost:44368/api/jobs/" + this.job.jobId + "/model/" + id;
+      fetch(url, {
+        method: "DELETE",
+        credentials: "include",
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("token"),
+          "Content-Type": "application/json"
+        }
+      })
+        // eslint-disable-next-line no-console
+        .catch(error => () => console.log(error));
+    },
+    isManager() {
+      return localStorage.getItem("Role") === "Manager";
     }
   },
   mounted: function() {
@@ -101,6 +187,22 @@ export default {
       .then(responseJson => responseJson.json())
       .then(data => {
         this.job = data;
+      })
+      // eslint-disable-next-line no-console
+      .catch(error => () => console.log(error));
+
+    url = "https://localhost:44368/api/models/";
+    fetch(url, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        Authorization: "Bearer " + localStorage.getItem("token"),
+        "Content-Type": "application/json"
+      }
+    })
+      .then(responseJson => responseJson.json())
+      .then(data => {
+        this.models = data;
       })
       // eslint-disable-next-line no-console
       .catch(error => () => console.log(error));

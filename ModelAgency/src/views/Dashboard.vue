@@ -1,38 +1,42 @@
 <template>
-  <div class="dash">
+  <div class="dash col-10">
     <h1>Dashboard</h1>
-    <table>
-      <tr>
-        <th>Customer</th>
-        <th>Date</th>
-        <th>Location</th>
-        <th>Work days</th>
-        <th>Comments</th>
-        <th>Models</th>
-        <th v-if="isManager"></th>
-      </tr>
-      <tr v-for="job in jobs" :key="job.jobId">
-        <td>{{job.customer}}</td>
-        <td>{{job.startDate}}</td>
-        <td>{{job.location}}</td>
-        <td>{{job.days}}</td>
-        <td>{{job.comments}}</td>
-        <td>
-          <span
-            v-for="model in job.models"
-            :key="model.modelId"
-          >{{model.firstName }} {{ model.lastName}}</span>
-          <br />
-        </td>
-        <td v-if="isManager">
-          <button class="btn btn-primary" v-on:click="editJob(job.jobId)">Edit</button>
-          <button class="btn btn-danger m-1">Delete</button>
-        </td>
-      </tr>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Customer</th>
+          <th scope="col">Date</th>
+          <th scope="col">Location</th>
+          <th scope="col">Work days</th>
+          <th scope="col">Comments</th>
+          <th scope="col">Models</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="job in jobs" :key="job.jobId">
+          <td>{{job.customer}}</td>
+          <td>{{job.startDate}}</td>
+          <td>{{job.location}}</td>
+          <td>{{job.days}}</td>
+          <td>{{job.comments}}</td>
+          <td>
+            <p
+              v-for="model in job.models"
+              :key="model.modelId"
+            >{{model.firstName }} {{ model.lastName}}</p>
+          </td>
+          <td>
+            <button class="btn btn-primary" v-on:click="editJob(job.jobId)">Edit</button>
+            <button
+              class="btn btn-danger m-1"
+              v-on:click="deleteJob(job.jobId)"
+              v-if="isManager()"
+            >Delete</button>
+          </td>
+        </tr>
+      </tbody>
     </table>
-    <ul>
-      <li v-for="job in jobs" :key="job.jobId">{{job}}</li>
-    </ul>
   </div>
 </template>
 
@@ -42,6 +46,27 @@ export default {
     return {
       jobs: []
     };
+  },
+  methods: {
+    isManager() {
+      return localStorage.getItem("Role") === "Manager";
+    },
+    editJob: function(jobId) {
+      this.$router.push({ name: "editjob", params: { id: jobId } });
+    },
+    deleteJob: function(jobId) {
+      var url = "https://localhost:44368/api/Jobs/" + jobId;
+      fetch(url, {
+        method: "DELETE",
+        credentials: "include",
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("token"),
+          "Content-Type": "application/json"
+        }
+      })
+        // eslint-disable-next-line no-console
+        .catch(error => () => console.log(error));
+    }
   },
   mounted: function() {
     var url = "https://localhost:44368/api/Jobs/";
@@ -63,18 +88,6 @@ export default {
       })
       // eslint-disable-next-line no-console
       .catch(error => () => console.log(error));
-  },
-  methods: {
-    isManager: function() {
-      if (localStorage.getItem("Role") === "Manager") {
-        return true;
-      } else {
-        return false;
-      }
-    },
-    editJob: function(jobId) {
-      this.$router.push({ name: "editjob", params: { id: jobId } });
-    }
   }
 };
 </script>
@@ -82,11 +95,5 @@ export default {
 <style scoped>
 .dash {
   padding: 10px;
-}
-table,
-th,
-td {
-  border: 1px solid black;
-  padding: 15px;
 }
 </style>
