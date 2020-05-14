@@ -34,10 +34,7 @@ export default {
       e.preventDefault();
       fetch("https://localhost:44368/api/account/login", {
         method: "POST",
-        body: JSON.stringify({
-          email: this.form.email,
-          password: this.form.password
-        }),
+        body: JSON.stringify(this.form),
         headers: { "Content-Type": "application/json" }
       }).then(res =>
         res.json().then(token => {
