@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using ModelsApi.Data;
 using ModelsApi.Models.DTOs;
 using ModelsApi.Models.Entities;
+using ModelsApi.Repositories.Implementation;
 
 namespace ModelsApi.Controllers
 {
@@ -18,29 +19,33 @@ namespace ModelsApi.Controllers
     //[Authorize]
     public class ExpensesController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
+        private readonly GenericRepository<EfExpense> _expensesRepository;
 
         public ExpensesController(ApplicationDbContext context,
             IMapper mapper)
         {
-            _context = context;
             _mapper = mapper;
+            _expensesRepository = new GenericRepository<EfExpense>(context);
         }
 
         // GET: api/Expenses
         [HttpGet]
         [Authorize(Roles = "Manager")]
-        public async Task<ActionResult<IEnumerable<EfExpense>>> GetExpenses()
+        public ActionResult<IEnumerable<EfExpense>> GetExpenses()
         {
-            return await _context.Expenses.ToListAsync().ConfigureAwait(false);
+            return _expensesRepository.GetBy(source => source,
+                predicate: e => true);
         }
 
         // GET: api/Expenses/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<EfExpense>> GetExpense(long id)
+        public ActionResult<EfExpense> GetExpense(long id)
         {
-            var expense = await _context.Expenses.FindAsync(id);
+            var expense = _expensesRepository.GetBy(
+                selector: source => source,
+                predicate: e => e.EfExpenseId == id)
+                .FirstOrDefault();
 
             if (expense == null)
             {
@@ -51,20 +56,18 @@ namespace ModelsApi.Controllers
         }
 
         [HttpGet("model/{modelId}")]
-        public async Task<ActionResult<IEnumerable<EfExpense>>> GetExpenseForModel(long modelId)
-        {
-            var expense = await _context.Expenses
-                .Where(e => e.ModelId == modelId)
-                .ToListAsync().ConfigureAwait(false);
-
-            return expense;
+        public ActionResult<IEnumerable<EfExpense>> GetExpenseForModel(long modelId)
+        {            
+            return _expensesRepository.GetBy(
+                selector: source => source,
+                predicate: e => e.ModelId == modelId);
         }
 
         // PUT: api/Expenses/5
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutExpense(long id, EfExpense expense)
+        public IActionResult PutExpense(long id, EfExpense expense)
         {
             if (expense is null)
                 return BadRequest("expense is null.");
@@ -73,25 +76,20 @@ namespace ModelsApi.Controllers
                 return BadRequest("Id mismatch.");
             }
 
-            _context.Entry(expense).State = EntityState.Modified;
+            var dbExpense = _expensesRepository.GetBy(
+                selector: source => source,
+                predicate: e => e.EfExpenseId == id,
+                disableTracking: false).FirstOrDefault();
 
-            try
-            {
-                await _context.SaveChangesAsync().ConfigureAwait(false);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ExpenseExists(id))
-                {
-                    return BadRequest("ExpenseId not found.");
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            dbExpense.ModelId = expense.ModelId;
+            dbExpense.Date = expense.Date;
+            dbExpense.JobId = expense.JobId;
+            dbExpense.Text = expense.Text;
+            dbExpense.amount = expense.amount;
 
-            return NoContent();
+            _expensesRepository.Update(dbExpense);
+
+            return Ok();
         }
 
         // POST: api/Expenses
@@ -101,7 +99,7 @@ namespace ModelsApi.Controllers
         /// <param name="newExpense"></param>
         /// <returns></returns>
         [HttpPost]
-        public async Task<ActionResult<EfExpense>> PostExpense(NewExpense newExpense)
+        public ActionResult<EfExpense> PostExpense(NewExpense newExpense)
         {
             if (newExpense is null)
             {
@@ -109,31 +107,21 @@ namespace ModelsApi.Controllers
             }
 
             var expense = _mapper.Map<EfExpense>(newExpense);
-            _context.Expenses.Add(expense);
-            await _context.SaveChangesAsync().ConfigureAwait(false);
+            _expensesRepository.Create(expense);
 
-            return CreatedAtAction("GetExpense", new { id = expense.EfExpenseId }, expense);
+            return _expensesRepository.GetBy(selector: source => source,
+                predicate: e => e.EfExpenseId == expense.EfExpenseId).FirstOrDefault();
         }
 
         // DELETE: api/Expenses/5
         [HttpDelete("{id}")]
-        public async Task<ActionResult<EfExpense>> DeleteExpense(long id)
+        public ActionResult<EfExpense> DeleteExpense(long id)
         {
-            var expense = await _context.Expenses.FindAsync(id);
-            if (expense == null)
-            {
-                return NotFound();
-            }
+            var expense = _expensesRepository.GetBy(selector: source => source, predicate: e => e.EfExpenseId == id).FirstOrDefault();
+            if (expense == null) return NotFound();
 
-            _context.Expenses.Remove(expense);
-            await _context.SaveChangesAsync().ConfigureAwait(false);
-
+            _expensesRepository.Delete(expense);
             return expense;
-        }
-
-        private bool ExpenseExists(long id)
-        {
-            return _context.Expenses.Any(e => e.EfExpenseId == id);
         }
     }
 }

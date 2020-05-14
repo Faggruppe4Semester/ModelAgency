@@ -10,14 +10,14 @@ using ModelsApi.Data;
 namespace ModelsApi.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20200506102919_InitialSchema")]
+    [Migration("20200514072537_InitialSchema")]
     partial class InitialSchema
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "3.1.3")
+                .HasAnnotation("ProductVersion", "3.1.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128)
                 .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
@@ -165,11 +165,11 @@ namespace ModelsApi.Migrations
                         .HasColumnType("bigint")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                    b.Property<string>("AddresLine1")
+                    b.Property<string>("AddressLine1")
                         .HasColumnType("nvarchar(64)")
                         .HasMaxLength(64);
 
-                    b.Property<string>("AddresLine2")
+                    b.Property<string>("AddressLine2")
                         .HasColumnType("nvarchar(64)")
                         .HasMaxLength(64);
 

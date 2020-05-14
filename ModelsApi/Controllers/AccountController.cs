@@ -14,6 +14,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using ModelsApi.Repositories.Implementation;
 using static BCrypt.Net.BCrypt;
 
 namespace ModelsApi.Controllers
@@ -26,14 +27,16 @@ namespace ModelsApi.Controllers
     [Authorize]
     public class AccountController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
         private readonly AppSettings _appSettings;
+        private readonly GenericRepository<EfAccount> _accountRepository;
+        private readonly GenericRepository<EfModel> _modelRepository;
 
         public AccountController(ApplicationDbContext context,
             IOptions<AppSettings> appSettings)
         {
-            _context = context;
             _appSettings = appSettings.Value;
+            _accountRepository = new GenericRepository<EfAccount>(context);
+            _modelRepository = new GenericRepository<EfModel>(context);
         }
 
         /// <summary>
@@ -42,13 +45,15 @@ namespace ModelsApi.Controllers
         /// <param name="login"></param>
         /// <returns></returns>
         [HttpPost("login"), AllowAnonymous]
-        public async Task<ActionResult<Token>> Login([FromBody]Login login)
+        public ActionResult<Token> Login([FromBody]Login login)
         {
             if (login != null)
             {
                 login.Email = login.Email.ToLowerInvariant();
-                var account = await _context.Accounts.Where(u => u.Email == login.Email)
-                    .FirstOrDefaultAsync().ConfigureAwait(false);
+                var account = _accountRepository.GetBy(
+                    selector: source => source,
+                    predicate: a => a.Email == login.Email)
+                    .FirstOrDefault();
 
                 if (account != null)
                 {
@@ -58,8 +63,12 @@ namespace ModelsApi.Controllers
                         long modelId = -1;
                         if (!account.IsManager)
                         {
-                            var model = await _context.Models.Where(m => m.EfAccountId == account.EfAccountId)
-                                .FirstOrDefaultAsync().ConfigureAwait(false);
+                            var model = _modelRepository.GetBy(
+                                    selector: source => source, 
+                                    predicate: m => m.EfAccountId == account.EfAccountId,
+                                    disableTracking: false)
+                                .FirstOrDefault();
+
                             if (model != null)
                                 modelId = model.EfModelId;
                         }
@@ -80,7 +89,7 @@ namespace ModelsApi.Controllers
         /// <param name="login"></param>
         /// <returns></returns>
         [HttpPut("Password")]
-        public async Task<ActionResult<Token>> ChangePassword([FromBody]Login login)
+        public ActionResult<Token> ChangePassword([FromBody]Login login)
         {
             if (login == null)
             {
@@ -88,8 +97,11 @@ namespace ModelsApi.Controllers
                 return BadRequest(ModelState);
             }
             login.Email = login.Email.ToLowerInvariant();
-            var account = await _context.Accounts.Where(u => u.Email == login.Email)
-                .FirstOrDefaultAsync().ConfigureAwait(false);
+            var account = _accountRepository.GetBy(
+                    selector: source => source,
+                    predicate: a => a.Email == login.Email,
+                    disableTracking: false)
+                .FirstOrDefault();
 
             if (account == null)
             {
@@ -101,7 +113,7 @@ namespace ModelsApi.Controllers
             {
 
                 account.PwHash = HashPassword(login.Password, _appSettings.BcryptWorkfactor);
-                await _context.SaveChangesAsync().ConfigureAwait(false);
+                _accountRepository.Update(account);
                 return Ok();
             }
             else
