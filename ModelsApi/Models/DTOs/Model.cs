@@ -8,6 +8,7 @@ namespace ModelsApi.Models.DTOs
 {
     public class Model
     {
+        public long ModelId { get; set; }
         [MaxLength(64)]
         public string FirstName { get; set; }
         [MaxLength(32)]
@@ -16,5 +17,6 @@ namespace ModelsApi.Models.DTOs
         public string Email { get; set; }
         [MaxLength(12)]
         public string PhoneNo { get; set; }
+        public List<Job> Jobs { get; set; }
     }
 }

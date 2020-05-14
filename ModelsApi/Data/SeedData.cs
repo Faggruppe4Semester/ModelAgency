@@ -17,6 +17,7 @@ namespace ModelsApi.Data
 
         public static void SeedData(ApplicationDbContext context)
         {
+            if (context == null) throw new ArgumentNullException(nameof(context));
             context.Database.EnsureCreated();
             if (!context.Accounts.Any())
                 SeedAccounts(context);
@@ -95,8 +96,8 @@ namespace ModelsApi.Data
                     LastName = "Campbell",
                     Email = "nc@m.dk",
                     PhoneNo = "+44123654789",
-                    AddresLine1 = "Abbey Road 68",
-                    AddresLine2 = "",
+                    AddressLine1 = "Abbey Road 68",
+                    AddressLine2 = "",
                     Zip = "XYZ789",
                     City = "London",
                     BirthDate = new DateTime(1970, 5, 22),
@@ -114,8 +115,8 @@ namespace ModelsApi.Data
                     LastName = "Christensen",
                     Email = "hc@m.dk",
                     PhoneNo = "+112345678",
-                    AddresLine1 = "9th Avenue 678",
-                    AddresLine2 = "Manhattan",
+                    AddressLine1 = "9th Avenue 678",
+                    AddressLine2 = "Manhattan",
                     Zip = "12345",
                     City = "New York",
                     Country = "USA",
@@ -134,8 +135,8 @@ namespace ModelsApi.Data
                     LastName = "Lundqvist",
                     Email = "al@m.dk",
                     PhoneNo = "+44321654987",
-                    AddresLine1 = "Queen Rd 129A",
-                    AddresLine2 = "",
+                    AddressLine1 = "Queen Rd 129A",
+                    AddressLine2 = "",
                     Zip = "ABZ123",
                     City = "London",
                     Country = "England",
@@ -154,8 +155,8 @@ namespace ModelsApi.Data
                     LastName = "Kortajarena",
                     Email = "jk@m.dk",
                     PhoneNo = "+3412345678",
-                    AddresLine1 = "Avinguda del Paral·lel 127",
-                    AddresLine2 = "",
+                    AddressLine1 = "Avinguda del Paral·lel 127",
+                    AddressLine2 = "",
                     Zip = "12345",
                     City = "Barcelona",
                     Country = "Spain",
@@ -237,15 +238,17 @@ namespace ModelsApi.Data
 
         private static void SeedExpenses(ApplicationDbContext context)
         {
+            var entity = new EfExpense
+            {
+                ModelId = 1,
+                JobId = 1,
+                Date = new DateTime(2020, 05, 03),
+                amount = 88.5M,
+                Text = "Taxi"
+            };
+
             context.Expenses.Add(
-                new EfExpense
-                {
-                    ModelId = 1,
-                    JobId = 1,
-                    Date = new DateTime(2020, 05, 03),
-                    Text = "Taxi",
-                    amount = 88.5M
-                }
+                entity
                 );
             context.SaveChanges();
         }

@@ -19,9 +19,9 @@ namespace ModelsApi.Models.Entities
         [MaxLength(12)]
         public string PhoneNo { get; set; }
         [MaxLength(64)]
-        public string AddresLine1 { get; set; }
+        public string AddressLine1 { get; set; }
         [MaxLength(64)]
-        public string AddresLine2 { get; set; }
+        public string AddressLine2 { get; set; }
         [MaxLength(9)]
         public string Zip { get; set; }
         [MaxLength(64)]
