@@ -1,6 +1,6 @@
 <template>
-  <div class="cc">
-    <h1>Edit job</h1>
+  <div class="cc col-2">
+    <h1>Edit job {{this.id}}</h1>
     <span v-show="errors.length">
       <b>Required:</b>
       <ul>
@@ -37,6 +37,7 @@
 
 <script>
 export default {
+  props: ["id"],
   data() {
     return {
       errors: [],

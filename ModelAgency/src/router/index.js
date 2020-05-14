@@ -4,6 +4,7 @@ import Router from "vue-router";
 import LoginPage from "@/views/Login";
 import Dashboard from "@/views/Dashboard";
 import Manager from "@/views/Manager";
+import EditJob from "@/components/EditJob";
 Vue.use(Router);
 
 const router = new Router({
@@ -16,17 +17,20 @@ const router = new Router({
     },
     {
       path: "/login",
-      name: "Login",
       component: LoginPage,
     },
     {
       path: "/dashboard",
-      name: "Dashboard",
       component: Dashboard,
     },
     {
+      path: '/editjob',
+      name: 'editjob',
+      component: EditJob,
+      props: true
+    },
+    {
       path: "/manager",
-      name: "Manager",
       component: Manager,
     },
   ],

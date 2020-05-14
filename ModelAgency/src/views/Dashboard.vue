@@ -9,6 +9,7 @@
         <th>Work days</th>
         <th>Comments</th>
         <th>Models</th>
+        <th v-if="isManager"></th>
       </tr>
       <tr v-for="job in jobs" :key="job.jobId">
         <td>{{job.customer}}</td>
@@ -22,6 +23,9 @@
             :key="jobModel.efModelId"
           >{{jobModel.model.firstName }} {{ jobModel.model.lastName}}</span>
           <br />
+        </td>
+        <td v-if="isManager">
+          <button class="btn btn-primary" v-on:click="editJob(job.efJobId)">Edit</button>
         </td>
       </tr>
     </table>
@@ -39,7 +43,7 @@ export default {
     };
   },
   mounted: function() {
-    var url = "https://localhost:44368/api/Jobs/1";
+    var url = "https://localhost:44368/api/Jobs/";
     fetch(url, {
       method: "GET",
       credentials: "include",
@@ -58,6 +62,18 @@ export default {
       })
       // eslint-disable-next-line no-console
       .catch(error => () => console.log(error));
+  },
+  methods: {
+    isManager: function() {
+      if (localStorage.getItem("Role") === "Manager") {
+        return true;
+      } else {
+        return false;
+      }
+    },
+    editJob: function(jobId) {
+      this.$router.push({ name: "editjob", params: { id: jobId } });
+    }
   }
 };
 </script>
