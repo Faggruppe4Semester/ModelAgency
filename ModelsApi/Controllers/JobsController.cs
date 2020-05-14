@@ -80,7 +80,7 @@ namespace ModelsApi.Controllers
         // PUT: api/Jobs/5
         [HttpPut("{id}")]
         //[Authorize(Roles = "Manager")]
-        public IActionResult PutJob(long id, EfJob newJob)
+        public IActionResult PutJob(long id, Job newJob)
         {
             if (newJob == null) throw new ArgumentNullException(nameof(newJob));
             var oldJob = _jobRepository.GetBy(
