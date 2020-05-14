@@ -21,11 +21,17 @@ namespace ModelsApi.Utilities
                 .ForMember(j => j.JobId, opt => opt.MapFrom(ej => ej.EfJobId))
                 .PreserveReferences();
 
-            CreateMap<EfModel, Model>().PreserveReferences();
+            CreateMap<EfModel, Model>()
+                .ForMember(m => m.ModelId, opt => opt.MapFrom(em => em.EfModelId))
+                .ForMember(m => m.Jobs, opt => opt.MapFrom(em => em.JobModels.Select(jm => jm.Job)))
+                .PreserveReferences();
+
             CreateMap<NewJob, EfJob>().PreserveReferences();
             CreateMap<NewExpense, EfExpense>().PreserveReferences();
             CreateMap<Manager, EfManager>().PreserveReferences();
-            CreateMap<EfManager, Manager>().PreserveReferences();
+            CreateMap<EfManager, Manager>()
+                .ForMember(m => m.ManagerId, opt => opt.MapFrom(em => em.EfManagerId))
+                .PreserveReferences();
         }
     }
 }

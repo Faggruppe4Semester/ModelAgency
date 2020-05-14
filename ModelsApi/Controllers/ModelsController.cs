@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -44,7 +45,10 @@ namespace ModelsApi.Controllers
         public ActionResult<IEnumerable<Model>> GetModels()
         {
             var models = _modelRepository.GetBy(source => source,
-                predicate: m => true);
+                predicate: m => true,
+                include: iq => iq
+                    .Include(m => m.JobModels)
+                    .ThenInclude(jm => jm.Job));
             return _mapper.Map<List<Model>>(models);
         }
 
@@ -53,7 +57,10 @@ namespace ModelsApi.Controllers
         public ActionResult<Model> GetModel(long id)
         {
             var model = _modelRepository.GetBy(source => source,
-                predicate: m => m.EfModelId == id).FirstOrDefault();
+                predicate: m => m.EfModelId == id,
+                include: iq => iq
+                    .Include(m => m.JobModels)
+                    .ThenInclude(jm => jm.Job)).FirstOrDefault();
 
             if (model == null)
             {
@@ -67,8 +74,9 @@ namespace ModelsApi.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutModel(long id, EfModel model)
+        public IActionResult PutModel(long id, EfModel model)
         {
+            if (model == null) throw new ArgumentNullException(nameof(model));
 
             if (id != model.EfModelId)
             {
@@ -80,8 +88,8 @@ namespace ModelsApi.Controllers
                 disableTracking: false).FirstOrDefault();
 
             dbModel.Email = model.Email;
-            dbModel.AddresLine1 = model.AddresLine1;
-            dbModel.AddresLine2 = model.AddresLine2;
+            dbModel.AddressLine1 = model.AddressLine1;
+            dbModel.AddressLine2 = model.AddressLine2;
             dbModel.BirthDate = model.BirthDate;
             dbModel.City = model.City;
             dbModel.Comments = model.Comments;
@@ -103,9 +111,10 @@ namespace ModelsApi.Controllers
 
         // POST: api/Models
         [HttpPost]
-        public async Task<ActionResult<Model>> PostModel(ModelDetails modelDto)
+        public ActionResult<Model> PostModel(ModelDetails modelDto)
         {
-            modelDto.Email = modelDto.Email.ToLower();
+            if (modelDto == null) throw new ArgumentNullException(nameof(modelDto));
+            modelDto.Email = modelDto.Email.ToLower(CultureInfo.CurrentCulture);
             var emailExist = _modelRepository.GetBy(selector: source => source,
                 predicate: u => u.Email == modelDto.Email).FirstOrDefault();
             if (emailExist != null)
@@ -134,7 +143,7 @@ namespace ModelsApi.Controllers
 
         // DELETE: api/Models/5
         [HttpDelete("{id}")]
-        public async Task<ActionResult> DeleteModel(long id)
+        public ActionResult DeleteModel(long id)
         {
             var model = _modelRepository.GetBy(source => source, m => m.EfModelId == id, disableTracking: false).FirstOrDefault();
             if (model == null)

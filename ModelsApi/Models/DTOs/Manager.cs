@@ -4,6 +4,7 @@ namespace ModelsApi.Models.DTOs
 {
     public class Manager
     {
+        public long ManagerId { get; set; }
         [MaxLength(64)]
         public string FirstName { get; set; }
         [MaxLength(32)]

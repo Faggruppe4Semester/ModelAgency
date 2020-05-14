@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System;
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -33,7 +34,7 @@ namespace ModelsApi.Controllers
 
         // GET: api/Jobs
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Job>>> GetJobs()
+        public ActionResult<IEnumerable<Job>> GetJobs()
         {
             var modelStr = User.Claims.First(a => a.Type == "ModelId").Value;
             if (!long.TryParse(modelStr, out var modelId))
@@ -60,7 +61,7 @@ namespace ModelsApi.Controllers
 
         // GET: api/Jobs/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Job>> GetJob(long id)
+        public ActionResult<Job> GetJob(long id)
         {
             var job = _jobRepository.GetBy(
                 selector: source => source,
@@ -79,19 +80,21 @@ namespace ModelsApi.Controllers
         // PUT: api/Jobs/5
         [HttpPut("{id}")]
         //[Authorize(Roles = "Manager")]
-        public IActionResult PutJob(long id, NewJob newJob)
+        public IActionResult PutJob(long id, EfJob newJob)
         {
-            var job = _jobRepository.GetBy(
+            if (newJob == null) throw new ArgumentNullException(nameof(newJob));
+            var oldJob = _jobRepository.GetBy(
                 selector: source => source,
                 predicate: ej => ej.EfJobId == id,
-                disableTracking: false).FirstOrDefault();
-            job.Comments = newJob.Comments;
-            job.Customer = newJob.Customer;
-            job.Days = newJob.Days;
-            job.Location = newJob.Location;
-            job.StartDate = newJob.StartDate;
+                disableTracking: false).FirstOrDefault() ?? throw new ArgumentNullException($"{nameof(newJob)} not found when trying to update job.");
 
-            _jobRepository.Update(job);
+            oldJob.Comments = newJob.Comments;
+            oldJob.Customer = newJob.Customer;
+            oldJob.Days = newJob.Days;
+            oldJob.Location = newJob.Location;
+            oldJob.StartDate = newJob.StartDate;
+
+            _jobRepository.Update(oldJob);
 
             return NoContent();
         }
@@ -104,7 +107,7 @@ namespace ModelsApi.Controllers
         /// <returns></returns>
         [HttpPost]
         [Authorize(Roles = "Manager")]
-        public async Task<ActionResult<Job>> PostJob(NewJob newJob)
+        public ActionResult<Job> PostJob(NewJob newJob)
         {
             var job = _mapper.Map<EfJob>(newJob);
             _jobRepository.Create(job);
@@ -120,7 +123,7 @@ namespace ModelsApi.Controllers
         /// <returns></returns>
         [HttpPost("{jobId}/model/{modelId}")]
         //[Authorize(Roles = "Manager")]
-        public async Task<ActionResult<Job>> AddModelToJob(long jobId, long modelId)
+        public ActionResult<Job> AddModelToJob(long jobId, long modelId)
         {
             var job = _jobRepository.GetBy(selector: source => source, predicate: j => j.EfJobId == jobId, disableTracking: false).FirstOrDefault();
             if (job == null)
@@ -160,7 +163,7 @@ namespace ModelsApi.Controllers
         /// <returns></returns>
         [HttpDelete("{jobId}/model/{modelId}")]
         //[Authorize(Roles = "Manager")]
-        public async Task<ActionResult<EfJob>> RemoveModelFromJob(long jobId, long modelId)
+        public ActionResult<EfJob> RemoveModelFromJob(long jobId, long modelId)
         {
             var jobModel = _jobModelRepository.GetBy(
                 selector: source => source,
@@ -180,7 +183,7 @@ namespace ModelsApi.Controllers
         // DELETE: api/Jobs/5
         [HttpDelete("{id}")]
         [Authorize(Roles = "Manager")]
-        public async Task<ActionResult> DeleteJob(long id)
+        public ActionResult DeleteJob(long id)
         {
             var job = _jobRepository.GetBy(selector: source => source,
                 predicate: ej => ej.EfJobId == id,

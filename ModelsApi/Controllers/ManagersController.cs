@@ -26,12 +26,15 @@ namespace ModelsApi.Controllers
         private readonly AppSettings _appSettings;
         private readonly GenericRepository<EfManager> _managerRepository;
         private readonly GenericRepository<EfAccount> _accountRepository;
+        private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
 
         public ManagersController(ApplicationDbContext context,
             IOptions<AppSettings> appSettings, IMapper mapper)
         {
-            _mapper = mapper;
+            if (appSettings == null) throw new ArgumentNullException(nameof(appSettings));
+            _context = context;
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _appSettings = appSettings.Value;
             _managerRepository = new GenericRepository<EfManager>(context);
             _accountRepository = new GenericRepository<EfAccount>(context);
@@ -39,7 +42,7 @@ namespace ModelsApi.Controllers
 
         // GET: api/Managers
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<EfManager>>> GetManagers()
+        public ActionResult<IEnumerable<EfManager>> GetManagers()
         {
             return _managerRepository.GetBy(selector: source => source,
                 predicate: m => true);
@@ -47,11 +50,11 @@ namespace ModelsApi.Controllers
 
         // GET: api/Managers/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<EfManager>> GetManager(long id)
+        public ActionResult<Manager> GetManager(long id)
         {
             var manager = _managerRepository.GetBy(selector: source => source,
                 predicate: m => m.EfManagerId == id).FirstOrDefault();
-            return manager ?? (ActionResult<EfManager>) NotFound();
+            return manager == null ? (ActionResult<Manager>) NotFound() : _mapper.Map<Manager>(manager);
         }
 
         // PUT: api/Managers/5
@@ -71,16 +74,22 @@ namespace ModelsApi.Controllers
             var old = _managerRepository.GetBy(selector: source => source,
                 predicate: m => m.EfManagerId == id).FirstOrDefault();
             if (old == null) return BadRequest($"Manager not found with id {id}");
-            if (old.Email == manager.Email) return Ok("No change made to email");
             
             // Update account
             var account = _accountRepository.GetBy(
                 selector: source => source,
                 predicate: a => a.EfAccountId == manager.EfAccountId, 
                 disableTracking: false).FirstOrDefault();
-            if (account != null) account.Email = manager.Email;
-            _accountRepository.Update(account);
+            if (account == null) return BadRequest("Account of manager not found."); 
             
+            account.Email = manager.Email;
+            old.Email = manager.Email;
+            old.FirstName = manager.FirstName;
+            old.LastName = manager.LastName;
+
+            _accountRepository.Update(account);
+            _managerRepository.Update(old);
+
             return Ok();
         }
 
@@ -138,7 +147,6 @@ namespace ModelsApi.Controllers
                 disableTracking: false).FirstOrDefault();
 
             _accountRepository.Delete(account);
-            _managerRepository.Delete(manager);
 
             return Ok();
         }

@@ -14,20 +14,20 @@ namespace ModelsApi.Utilities
         //Encapsulate Db-funcitions into transactions.
         public static T WriteToDatabase<T>(this T source, Func<T, EntityEntry<T>> dbFunc, ApplicationDbContext db) where T : class
         {
-            using (var transaction = db.Database.BeginTransaction())
+            if (dbFunc == null) throw new ArgumentNullException(nameof(dbFunc));
+            if (db == null) throw new ArgumentNullException(nameof(db));
+            using var transaction = db.Database.BeginTransaction();
+            try
             {
-                try
-                {
-                    var entry = dbFunc(source);
-                    db.SaveChanges();
-                    transaction.Commit();
-                    return entry.Entity;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
+                var entry = dbFunc(source);
+                db.SaveChanges();
+                transaction.Commit();
+                return entry.Entity;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
             }
         }
 
@@ -40,6 +40,7 @@ namespace ModelsApi.Utilities
             bool disableTracking = true)
         where TEntity : class
         {
+            if (db == null) throw new ArgumentNullException(nameof(db));
             IQueryable<TEntity> query = db.Set<TEntity>();
 
             if (disableTracking)

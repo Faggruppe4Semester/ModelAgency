@@ -17,5 +17,6 @@ namespace ModelsApi.Models.DTOs
         public string Email { get; set; }
         [MaxLength(12)]
         public string PhoneNo { get; set; }
+        public List<Job> Jobs { get; set; }
     }
 }
