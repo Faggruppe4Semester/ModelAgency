@@ -19,13 +19,14 @@
         <td>{{job.comments}}</td>
         <td>
           <span
-            v-for="jobModel in job.jobModels"
-            :key="jobModel.efModelId"
-          >{{jobModel.model.firstName }} {{ jobModel.model.lastName}}</span>
+            v-for="model in job.models"
+            :key="model.modelId"
+          >{{model.firstName }} {{ model.lastName}}</span>
           <br />
         </td>
         <td v-if="isManager">
-          <button class="btn btn-primary" v-on:click="editJob(job.efJobId)">Edit</button>
+          <button class="btn btn-primary" v-on:click="editJob(job.jobId)">Edit</button>
+          <button class="btn btn-danger m-1">Delete</button>
         </td>
       </tr>
     </table>
